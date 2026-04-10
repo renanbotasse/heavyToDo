@@ -13,6 +13,22 @@
       <input v-model="newName" autofocus placeholder="Project name…"
         class="flex-1 bg-secondary text-foreground rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring border border-border" />
       <input type="color" v-model="newColor" class="w-8 h-8 rounded cursor-pointer border-0 bg-transparent" />
+      <button
+        type="button"
+        @click="cycleColorCombo"
+        class="w-8 h-8 rounded border border-border hover:bg-card-hover transition-colors flex items-center justify-center text-sm"
+        title="Switch color combo"
+      >🎨</button>
+      <div class="flex items-center gap-1">
+        <button
+          v-for="color in activeColorCombo"
+          :key="color"
+          type="button"
+          class="w-4 h-4 rounded border border-border hover:scale-110 transition-transform"
+          :style="{ background: color }"
+          @click="newColor = color"
+        />
+      </div>
       <button type="submit" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm">Create</button>
       <button type="button" @click="showAdd = false" class="text-muted-foreground hover:text-foreground text-sm">Cancel</button>
     </form>
@@ -53,16 +69,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useProjectsStore } from '@/stores/projects'
 import { useTasksStore } from '@/stores/tasks'
+import { useUIStore } from '@/stores/ui'
 
 const projectsStore = useProjectsStore()
 const tasksStore = useTasksStore()
+const uiStore = useUIStore()
 const showAdd = ref(false)
 const newName = ref('')
 const newColor = ref('#6366f1')
+const activeColorCombo = computed(() => uiStore.activeProjectColors)
 
 function getPendingCount(id: number) {
   return tasksStore.getByProject(id).filter(t => t.status !== 'done' && t.status !== 'archived').length
@@ -70,6 +89,11 @@ function getPendingCount(id: number) {
 
 function getTotalCount(id: number) {
   return tasksStore.getByProject(id).length
+}
+
+function cycleColorCombo() {
+  uiStore.cycleThemeCombo()
+  newColor.value = uiStore.activeProjectColors[0]
 }
 
 async function handleAdd() {

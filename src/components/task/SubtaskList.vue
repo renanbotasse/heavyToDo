@@ -26,19 +26,19 @@
 
     <form v-if="showAdd" @submit.prevent="handleAdd" class="flex flex-col gap-3 p-4 border-3 border-ink border-dashed mt-4 bg-parchment/5">
       <div class="flex flex-col gap-1">
-        <label class="text-[9px] font-bold font-tech uppercase tracking-widest text-ink/50">New Operational Unit</label>
-        <input v-model="newTitle" autofocus placeholder="COMMAND LINE INPUT..."
+        <label class="text-[9px] font-bold font-tech uppercase tracking-widest text-ink/50">New Subtask</label>
+        <input v-model="newTitle" autofocus placeholder="Subtask title..."
           class="w-full bg-transparent text-ink text-sm outline-none border-b-2 border-ink pb-1" />
       </div>
       <div class="flex gap-2 justify-end">
-        <Button type="button" variant="ghost" size="sm" @click="showAdd = false">DISCARD</Button>
-        <Button type="submit" variant="default" size="sm">INITIATE</Button>
+        <Button type="button" variant="ghost" size="sm" @click="showAdd = false">Cancel</Button>
+        <Button type="submit" variant="default" size="sm">Add</Button>
       </div>
     </form>
 
     <Button v-else @click="showAdd = true" variant="ghost"
       class="w-fit text-[10px] font-bold font-tech uppercase tracking-widest mt-2">
-      + INITIALIZE SUB-UNIT
+      + Add Subtask
     </Button>
   </div>
 </template>

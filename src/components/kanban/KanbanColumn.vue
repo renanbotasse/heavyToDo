@@ -12,13 +12,10 @@
     <VueDraggable
       v-model="localTasks"
       :group="{ name: 'kanban', pull: true, put: true }"
-      item-key="id"
       class="flex-1 overflow-y-auto p-3 flex flex-col gap-3 min-h-[200px]"
       @add="onAdd"
     >
-      <template #item="{ element }">
-        <KanbanCard :task="element" />
-      </template>
+      <KanbanCard v-for="task in localTasks" :key="task.id" :task="task" />
     </VueDraggable>
 
     <!-- Add task shortcut -->

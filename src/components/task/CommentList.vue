@@ -5,26 +5,26 @@
       <div class="flex items-center justify-between mb-2">
         <span class="text-[9px] font-tech font-bold uppercase tracking-widest text-ink/40">{{ formatDate(comment.createdAt) }}</span>
         <button @click="commentsStore.remove(taskId, comment.id!)"
-          class="text-xs text-ink/40 hover:text-primary opacity-0 group-hover:opacity-100 transition-all font-bold">✕ DELETE RECORD</button>
+          class="text-xs text-ink/40 hover:text-primary opacity-0 group-hover:opacity-100 transition-all font-bold">✕ Delete</button>
       </div>
       <p class="text-sm font-sans text-ink whitespace-pre-wrap">{{ comment.text }}</p>
     </div>
 
     <div v-if="commentsStore.getForTask(taskId).length === 0" class="border-2 border-ink border-dashed p-6 text-center">
-      <p class="text-[9px] font-tech font-bold uppercase tracking-widest text-ink/20">Zero intelligence logs detected</p>
+      <p class="text-[9px] font-tech font-bold uppercase tracking-widest text-ink/20">No comments yet</p>
     </div>
 
     <div class="flex flex-col gap-3 mt-4">
       <div class="flex flex-col gap-1">
-        <label class="text-[9px] font-bold font-tech uppercase tracking-widest text-ink/50">New Intel Log</label>
-        <textarea v-model="newText" placeholder="RECORD YOUR OBSERVATIONS..." rows="3"
+        <label class="text-[9px] font-bold font-tech uppercase tracking-widest text-ink/50">New Comment</label>
+        <textarea v-model="newText" placeholder="Write a comment..." rows="3"
           class="w-full bg-white text-ink text-sm border-3 border-ink p-4 outline-none focus:border-primary transition-colors resize-none placeholder:text-ink/20 shadow-standard"
           @keydown.ctrl.enter="handleSubmit"
           @keydown.meta.enter="handleSubmit" />
       </div>
       <div class="flex justify-end">
         <Button @click="handleSubmit" variant="default" size="default" class="h-12 px-8">
-          EXECUTE LOG
+          Add Comment
         </Button>
       </div>
     </div>

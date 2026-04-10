@@ -66,7 +66,15 @@ async function loadDoc() {
   if (doc.value) {
     titleDraft.value = doc.value.title
     if (doc.value.content && editor.value) {
-      try { editor.value.commands.setContent(JSON.parse(doc.value.content), false) } catch {}
+      try {
+        editor.value.commands.setContent(JSON.parse(doc.value.content), false)
+      } catch {
+        // Backward compatibility for older plain text/markdown docs.
+        const normalized = doc.value.content
+          .replace(/\r\n/g, '\n')
+          .replace(/\n/g, '<br>')
+        editor.value.commands.setContent(`<p>${normalized}</p>`, false)
+      }
     }
   }
 }
@@ -103,3 +111,21 @@ onBeforeUnmount(() => {
   autosave.flush()
 })
 </script>
+
+<style scoped>
+.tiptap-editor :deep(.ProseMirror) {
+  min-height: 100%;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  outline: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.7;
+}
+
+.tiptap-editor :deep(.ProseMirror p) {
+  margin: 0 0 0.8rem;
+}
+</style>

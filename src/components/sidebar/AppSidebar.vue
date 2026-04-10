@@ -58,8 +58,24 @@
       <form v-if="showAddProject" @submit.prevent="handleAddProject" class="px-2 mb-4 flex flex-col gap-2">
         <input v-model="newProjectName" autofocus placeholder="Project name…"
           class="w-full bg-ink text-white text-xs px-3 py-2 outline-none border-b-2 border-primary" />
-        <div class="flex gap-2">
+        <div class="flex gap-2 items-center">
           <input type="color" v-model="newProjectColor" class="w-8 h-8 cursor-pointer bg-transparent border-0 p-0" />
+          <button
+            type="button"
+            @click="cycleColorCombo"
+            class="w-8 h-8 flex items-center justify-center border border-white/30 hover:border-white text-sm"
+            title="Switch color combo"
+          >🎨</button>
+          <div class="flex items-center gap-1">
+            <button
+              v-for="color in activeColorCombo"
+              :key="color"
+              type="button"
+              class="w-4 h-4 border border-white/20 hover:scale-110 transition-transform"
+              :style="{ background: color }"
+              @click="newProjectColor = color"
+            />
+          </div>
           <Button type="submit" size="sm" class="flex-1">Add</Button>
         </div>
       </form>
@@ -107,9 +123,15 @@ const newProjectName = ref('')
 const newProjectColor = ref('#6366f1')
 
 const inboxCount = computed(() => tasksStore.getInbox().length)
+const activeColorCombo = computed(() => uiStore.activeProjectColors)
 
 function getPendingCount(projectId: number) {
   return tasksStore.getByProject(projectId).filter(t => t.status !== 'done' && t.status !== 'archived').length
+}
+
+function cycleColorCombo() {
+  uiStore.cycleThemeCombo()
+  newProjectColor.value = uiStore.activeProjectColors[0]
 }
 
 async function handleAddProject() {

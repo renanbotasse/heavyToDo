@@ -21,9 +21,9 @@
           <div class="flex-1 overflow-y-auto px-8 py-8 flex flex-col gap-8 bg-white">
             <!-- Description -->
             <div class="flex flex-col gap-2">
-              <label class="text-[10px] font-bold font-tech uppercase tracking-[0.2em] text-ink/50">Detailed Logs & description</label>
+              <label class="text-[10px] font-bold font-tech uppercase tracking-[0.2em] text-ink/50">Description</label>
               <div class="border-3 border-ink p-4 min-h-[150px] bg-parchment/5 pt-6 relative">
-                <div class="absolute top-0 left-0 bg-ink text-white px-2 py-0.5 text-[8px] font-tech uppercase">Inkwell Editor</div>
+                <div class="absolute top-0 left-0 bg-ink text-white px-2 py-0.5 text-[8px] font-tech uppercase">Editor</div>
                 <TaskEditor :content="task.description" @update="onDescUpdate" />
               </div>
             </div>
@@ -34,7 +34,7 @@
             <div class="flex flex-col gap-4">
               <div class="flex items-center gap-2">
                 <span class="w-2 h-2 bg-primary"></span>
-                <label class="text-[10px] font-bold font-tech uppercase tracking-[0.2em]">Operational Sub-Units</label>
+                <label class="text-[10px] font-bold font-tech uppercase tracking-[0.2em]">Subtasks</label>
               </div>
               <SubtaskList :parent-task="task" />
             </div>
@@ -45,7 +45,7 @@
             <div class="flex flex-col gap-4">
               <div class="flex items-center gap-2">
                 <span class="w-2 h-2 bg-secondary"></span>
-                <label class="text-[10px] font-bold font-tech uppercase tracking-[0.2em]">Chronicler Notes & feedback</label>
+                <label class="text-[10px] font-bold font-tech uppercase tracking-[0.2em]">Comments</label>
               </div>
               <CommentList :task-id="task.id!" />
             </div>
@@ -62,7 +62,7 @@
                   class="w-full h-12 text-sm font-tech tracking-wider"
                 >
                   <span class="mr-2">{{ isTimerActive ? '⏹' : '▶' }}</span>
-                  {{ isTimerActive ? timerStore.elapsedFormatted : 'CORE TIMER' }}
+                  {{ isTimerActive ? timerStore.elapsedFormatted : 'Start Timer' }}
                 </Button>
                 <Button
                   @click="tasksStore.toggleMyDay(task.id!)"
@@ -80,14 +80,14 @@
               <!-- Metadata fields -->
               <div class="flex flex-col gap-4">
                 <div class="flex flex-col gap-1">
-                  <span class="text-[9px] font-bold text-ink/50 uppercase tracking-widest font-tech">Assigned Project</span>
+                  <span class="text-[9px] font-bold text-ink/50 uppercase tracking-widest font-tech">Project</span>
                   <select v-model="projectDraft" @change="queueSave" class="bg-white border-2 border-ink px-2 py-1.5 font-tech text-[11px] outline-none">
                     <option v-for="p in projectsStore.projects" :key="p.id" :value="p.id">{{ p.name.toUpperCase() }}</option>
                   </select>
                 </div>
 
                 <div class="flex flex-col gap-1">
-                  <span class="text-[9px] font-bold text-ink/50 uppercase tracking-widest font-tech">Lifecycle Status</span>
+                  <span class="text-[9px] font-bold text-ink/50 uppercase tracking-widest font-tech">Status</span>
                   <select v-model="statusDraft" @change="queueSave" class="bg-white border-2 border-ink px-2 py-1.5 font-tech text-[11px] outline-none">
                     <option value="todo">PENDING</option>
                     <option value="in_progress">IN PROGRESS</option>
@@ -97,17 +97,17 @@
                 </div>
 
                 <div class="flex flex-col gap-1">
-                  <span class="text-[9px] font-bold text-ink/50 uppercase tracking-widest font-tech">Criticality Level</span>
+                  <span class="text-[9px] font-bold text-ink/50 uppercase tracking-widest font-tech">Priority</span>
                   <select v-model="priorityDraft" @change="queueSave" class="bg-white border-2 border-ink px-2 py-1.5 font-tech text-[11px] outline-none">
-                    <option value="none">STANDARD</option>
-                    <option value="low">LOW PRIORITY</option>
-                    <option value="medium">HIGH IMPACT</option>
-                    <option value="high">LIFE OR DEATH</option>
+                    <option value="none">NONE</option>
+                    <option value="low">LOW</option>
+                    <option value="medium">MEDIUM</option>
+                    <option value="high">HIGH</option>
                   </select>
                 </div>
 
                 <div class="flex flex-col gap-1">
-                  <span class="text-[9px] font-bold text-ink/50 uppercase tracking-widest font-tech">Deadline Details</span>
+                  <span class="text-[9px] font-bold text-ink/50 uppercase tracking-widest font-tech">Due Date</span>
                   <div class="flex flex-col gap-2">
                     <input type="date" v-model="dueDateDraft" @change="queueSave" class="bg-white border-2 border-ink px-2 py-1.5 font-tech text-[11px] outline-none w-full" />
                     <input type="time" v-model="dueTimeDraft" @change="queueSave" class="bg-white border-2 border-ink px-2 py-1.5 font-tech text-[11px] outline-none w-full" />
@@ -115,22 +115,22 @@
                 </div>
 
                 <div class="flex flex-col gap-1">
-                  <span class="text-[9px] font-bold text-ink/50 uppercase tracking-widest font-tech">Estimated min. requirement</span>
+                  <span class="text-[9px] font-bold text-ink/50 uppercase tracking-widest font-tech">Estimate (min)</span>
                   <input type="number" v-model.number="estimateDraft" @input="queueSave" min="0" step="15" class="bg-white border-2 border-ink px-2 py-1.5 font-tech text-[11px] outline-none w-full" />
                 </div>
               </div>
 
               <div v-if="totalSpentMin > 0" class="text-[10px] font-tech text-ink/30 uppercase tracking-widest border-t-2 border-ink/5 pt-4 text-center italic">
-                Logs show {{ totalSpentMin }} total recorded minutes
+                Total tracked time: {{ totalSpentMin }} min
               </div>
             </div>
 
             <!-- Audit Trail -->
             <div class="mt-auto pt-6 border-t-3 border-ink">
-              <span class="text-[9px] font-bold text-ink/40 uppercase tracking-widest font-tech block">Record created</span>
+              <span class="text-[9px] font-bold text-ink/40 uppercase tracking-widest font-tech block">Created</span>
               <p class="text-[11px] font-tech font-bold">{{ formatDate(task.createdAt).toUpperCase() }}</p>
               <div v-if="task.completedAt" class="mt-2">
-                <span class="text-[9px] font-bold text-primary/70 uppercase tracking-widest font-tech block">Finalized at</span>
+                <span class="text-[9px] font-bold text-primary/70 uppercase tracking-widest font-tech block">Completed</span>
                 <p class="text-[11px] font-tech font-bold text-primary">{{ formatDate(task.completedAt).toUpperCase() }}</p>
               </div>
             </div>
