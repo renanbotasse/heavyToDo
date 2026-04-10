@@ -16,7 +16,6 @@ export const useProjectsStore = defineStore('projects', () => {
   }
 
   async function update(id: ID, changes: Partial<Project>) {
-    if (projects.value.find(p => p.id === id)?.isDefault && changes.name) return
     await db.projects.update(id, changes)
     const idx = projects.value.findIndex(p => p.id === id)
     if (idx !== -1) Object.assign(projects.value[idx], changes)

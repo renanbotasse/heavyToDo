@@ -33,7 +33,7 @@ class AppDB extends Dexie {
 
 export const db = new AppDB()
 
-/** Seed inicial — "Sem Projeto" + UserConfig */
+/** Seed inicial — "No Project" + UserConfig */
 export async function seedDefaults() {
   const all = await db.projects.toArray()
   const existing = all.find(p => p.isDefault)
@@ -41,13 +41,17 @@ export async function seedDefaults() {
 
   if (!existing) {
     defaultProjectId = (await db.projects.add({
-      name: 'Sem Projeto',
+      name: 'No Project',
       color: '#6b7280',
       isDefault: true,
       createdAt: new Date(),
     })) as number
   } else {
     defaultProjectId = existing.id!
+    // Keep the default project label consistent across older databases.
+    if (existing.name !== 'No Project') {
+      await db.projects.update(existing.id!, { name: 'No Project' })
+    }
   }
 
   const config = await db.userConfig.get(1)

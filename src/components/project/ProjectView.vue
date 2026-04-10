@@ -1,5 +1,15 @@
 <template>
   <div class="flex flex-col h-full overflow-hidden" v-if="project">
+    <div class="flex-shrink-0 mb-4">
+      <input
+        v-model="projectNameDraft"
+        @blur="saveProjectName"
+        @keydown.enter.prevent="saveProjectName"
+        placeholder="Project name"
+        class="w-full max-w-xl bg-white border-3 border-ink px-4 py-2.5 text-lg font-display italic font-bold text-ink outline-none focus:border-primary transition-colors"
+      />
+    </div>
+
     <!-- Secondary Navigation (Tabs) -->
     <div class="flex-shrink-0 mb-8">
       <div class="flex items-center gap-0 border-3 border-ink w-fit bg-parchment-container shadow-standard">
@@ -38,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useProjectsStore } from '@/stores/projects'
 import TaskList from '@/components/task/TaskList.vue'
 import KanbanView from '@/components/kanban/KanbanView.vue'
@@ -50,4 +60,21 @@ const projectsStore = useProjectsStore()
 const tabs = ['Tasks', 'Kanban', 'Docs'] as const
 const activeTab = ref<typeof tabs[number]>('Tasks')
 const project = computed(() => projectsStore.getById(props.projectId))
+const projectNameDraft = ref('')
+
+watch(project, (current) => {
+  projectNameDraft.value = current?.name ?? ''
+}, { immediate: true })
+
+async function saveProjectName() {
+  const current = project.value
+  if (!current) return
+  const trimmed = projectNameDraft.value.trim()
+  if (!trimmed) {
+    projectNameDraft.value = current.name
+    return
+  }
+  if (trimmed === current.name) return
+  await projectsStore.update(current.id!, { name: trimmed })
+}
 </script>
