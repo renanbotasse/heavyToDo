@@ -10,16 +10,39 @@
       ]"
       @click="uiStore.openTask(task.id!)"
     >
-      <div class="flex items-center gap-4 min-w-0">
-        <!-- Status checkbox (Neo-Brutalist Square) -->
+      <div class="flex items-center gap-3 min-w-0">
+        <!-- Drag handle (shown when position prop provided) -->
+        <span v-if="position !== undefined"
+          class="task-drag-handle cursor-grab opacity-0 group-hover:opacity-30 hover:!opacity-80 flex-shrink-0 select-none text-ink text-lg leading-none"
+          @click.stop
+        >⠿</span>
+
+        <!-- Position badge -->
+        <template v-if="position !== undefined">
+          <button v-if="!editingPosition"
+            class="flex-shrink-0 w-10 h-7 border-2 border-ink/30 bg-parchment-high text-sm font-black font-tech text-ink/60 hover:border-primary hover:text-primary transition-colors flex items-center justify-center"
+            title="Click to change position"
+            @click.stop="startEditPosition"
+          >#{{ position }}</button>
+          <input v-else
+            ref="posInputRef"
+            v-model.number="positionDraft"
+            type="number" min="1"
+            class="flex-shrink-0 w-10 h-6 border-2 border-primary bg-white text-[10px] font-bold font-tech text-primary outline-none text-center"
+            @keydown.enter.stop="confirmPosition"
+            @keydown.escape.stop="editingPosition = false"
+            @blur="confirmPosition"
+            @click.stop
+          />
+        </template>
+
+        <!-- Status checkbox -->
         <button
-          class="w-6 h-6 border-3 border-ink flex-shrink-0 flex items-center justify-center transition-all active:scale-95 bg-white"
-          :class="task.status === 'done'
-            ? 'bg-primary'
-            : 'hover:bg-primary/10'"
+          class="w-6 h-6 border-3 border-ink flex-shrink-0 flex items-center justify-center transition-all active:scale-95"
+          :class="task.status === 'done' ? 'bg-primary border-primary' : 'bg-white hover:bg-primary/10'"
           @click.stop="toggleStatus"
         >
-          <span v-if="task.status === 'done'" class="text-white font-bold">X</span>
+          <span v-if="task.status === 'done'" class="text-white font-bold text-sm leading-none">✓</span>
         </button>
 
         <div class="min-w-0">
@@ -86,11 +109,11 @@
           @click="uiStore.openTask(sub.id!)"
         >
           <button
-            class="w-5 h-5 border-2 border-ink flex-shrink-0 flex items-center justify-center transition-all bg-white"
-            :class="sub.status === 'done' ? 'bg-primary' : 'hover:bg-primary/10'"
+            class="w-5 h-5 border-2 flex-shrink-0 flex items-center justify-center transition-all"
+            :class="sub.status === 'done' ? 'bg-primary border-primary' : 'bg-white border-ink hover:bg-primary/10'"
             @click.stop="toggleSubStatus(sub)"
           >
-            <span v-if="sub.status === 'done'" class="text-white text-[10px] font-bold">X</span>
+            <span v-if="sub.status === 'done'" class="text-white text-[11px] font-bold leading-none">✓</span>
           </button>
           <span
             class="text-sm font-bold truncate flex-1 font-sans"
@@ -105,7 +128,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { format, isPast, isToday } from 'date-fns'
 import { useTasksStore } from '@/stores/tasks'
 import { useTimerStore } from '@/stores/timer'
@@ -113,7 +136,7 @@ import { useUIStore } from '@/stores/ui'
 import { useProjectsStore } from '@/stores/projects'
 import type { Task } from '@/entities'
 
-const props = defineProps<{ task: Task }>()
+const props = defineProps<{ task: Task; position?: number }>()
 
 const tasksStore = useTasksStore()
 const timerStore = useTimerStore()
@@ -121,6 +144,22 @@ const uiStore = useUIStore()
 const projectsStore = useProjectsStore()
 
 const dateInputRef = ref<HTMLInputElement | null>(null)
+const posInputRef = ref<HTMLInputElement | null>(null)
+const editingPosition = ref(false)
+const positionDraft = ref(0)
+
+async function startEditPosition() {
+  positionDraft.value = props.position ?? 1
+  editingPosition.value = true
+  await nextTick()
+  posInputRef.value?.select()
+}
+
+async function confirmPosition() {
+  editingPosition.value = false
+  const newPos = positionDraft.value
+  if (newPos >= 1) await tasksStore.moveToPosition(props.task.id!, newPos)
+}
 
 const project = computed(() => props.task.projectId ? projectsStore.getById(props.task.projectId) : null)
 const subtasks = computed(() => tasksStore.getSubtasks(props.task.id!))

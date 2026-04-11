@@ -6,12 +6,17 @@ import type { Project, ID } from '@/entities'
 export const useProjectsStore = defineStore('projects', () => {
   const projects = ref<Project[]>([])
 
+  function sortInPlace() {
+    projects.value.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+  }
+
   async function load() {
-    projects.value = await db.projects.orderBy('id').toArray()
+    projects.value = await db.projects.orderBy('order').toArray()
   }
 
   async function add(name: string, color: string) {
-    const id = await db.projects.add({ name, color, isDefault: false, createdAt: new Date() })
+    const nextOrder = projects.value.length
+    const id = await db.projects.add({ name, color, isDefault: false, order: nextOrder, createdAt: new Date() })
     projects.value.push((await db.projects.get(id))!)
   }
 
@@ -29,10 +34,30 @@ export const useProjectsStore = defineStore('projects', () => {
     await db.docs.where('projectId').equals(id).delete()
     await db.projects.delete(id)
     projects.value = projects.value.filter(p => p.id !== id)
+    // Recompact order values after removal
+    projects.value.forEach((p, i) => { p.order = i })
+    await db.transaction('rw', db.projects, async () => {
+      for (let i = 0; i < projects.value.length; i++) {
+        await db.projects.update(projects.value[i].id!, { order: i })
+      }
+    })
+  }
+
+  async function reorder(orderedIds: ID[]) {
+    await db.transaction('rw', db.projects, async () => {
+      for (let i = 0; i < orderedIds.length; i++) {
+        await db.projects.update(orderedIds[i], { order: i })
+      }
+    })
+    orderedIds.forEach((id, i) => {
+      const p = projects.value.find(p => p.id === id)
+      if (p) p.order = i
+    })
+    sortInPlace()
   }
 
   function getById(id: ID) { return projects.value.find(p => p.id === id) }
   function getDefault() { return projects.value.find(p => p.isDefault) }
 
-  return { projects, load, add, update, remove, getById, getDefault }
+  return { projects, load, add, update, remove, reorder, getById, getDefault }
 })

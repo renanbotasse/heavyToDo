@@ -4,10 +4,15 @@
 
     <div class="flex flex-col border-3 border-ink bg-white divide-y-2 divide-ink/10">
       <div
-        v-for="sub in subtasks" :key="sub.id"
-        class="group flex items-center gap-4 px-4 py-3 hover:bg-parchment-high cursor-pointer transition-colors"
+        v-for="(sub, idx) in subtasks" :key="sub.id"
+        class="group flex items-center gap-3 px-4 py-3 hover:bg-parchment-high cursor-pointer transition-colors"
         @click="uiStore.openTask(sub.id!)"
       >
+        <!-- Sub-number -->
+        <span class="flex-shrink-0 text-[10px] font-bold font-tech text-ink/30 w-7 text-right">
+          {{ parentPosition }}.{{ idx + 1 }}
+        </span>
+
         <button
           class="w-5 h-5 border-2 flex-shrink-0 flex items-center justify-center transition-all"
           :class="sub.status === 'done'
@@ -61,6 +66,9 @@ const newTitle = ref('')
 
 const subtasks = computed(() => tasksStore.getSubtasks(props.parentTask.id!))
 const doneTasks = computed(() => subtasks.value.filter(s => s.status === 'done').length)
+
+// Parent's 1-based position within the project (used for sub-numbering: 2.1, 2.2...)
+const parentPosition = computed(() => tasksStore.getPositionInProject(props.parentTask.id!))
 const priorityColor: Record<string, string> = { 
   low: 'bg-secondary', 
   medium: 'bg-tertiary', 

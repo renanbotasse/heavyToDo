@@ -80,32 +80,51 @@
         </div>
       </form>
 
-      <!-- Project list -->
-      <RouterLink
-        v-for="project in projectsStore.projects"
-        :key="project.id"
-        :to="`/projects/${project.id}`"
-        custom
-        v-slot="{ navigate, isActive }"
+      <!-- Project list (draggable) -->
+      <VueDraggable
+        v-model="localProjects"
+        handle=".proj-drag-handle"
+        :animation="150"
+        class="flex flex-col"
+        @end="onProjectReorder"
       >
-        <button
-          @click="navigate"
-          class="flex items-center gap-3 px-4 py-2 text-xs font-tech transition-all text-left"
-          :class="isActive ? 'bg-primary/20 border-l-3 border-primary text-white' : 'hover:bg-ink/10'">
-          <ProjectColorPicker :project-id="project.id!" :color="project.color" :size="10" />
-          <span class="truncate flex-1 uppercase tracking-wider">{{ project.name }}</span>
-          <span v-if="getPendingCount(project.id!) > 0"
-            class="text-[9px] font-bold opacity-50">{{ getPendingCount(project.id!) }}</span>
-        </button>
-      </RouterLink>
+        <RouterLink
+          v-for="project in localProjects"
+          :key="project.id"
+          :to="`/projects/${project.id}`"
+          custom
+          v-slot="{ navigate, isActive }"
+        >
+          <div
+            class="group flex items-center gap-2 px-2 py-1 text-xs font-tech transition-all"
+            :class="isActive ? 'bg-primary/20 border-l-3 border-primary text-white' : 'hover:bg-ink/10'"
+          >
+            <!-- Drag handle -->
+            <span
+              class="proj-drag-handle cursor-grab opacity-0 group-hover:opacity-40 hover:!opacity-100 flex-shrink-0 select-none text-white text-sm leading-none px-0.5"
+              @click.stop
+            >⠿</span>
+            <button
+              @click="navigate"
+              class="flex items-center gap-2 flex-1 min-w-0 text-left"
+            >
+              <ProjectColorPicker :project-id="project.id!" :color="project.color" :size="10" />
+              <span class="truncate flex-1 uppercase tracking-wider">{{ project.name }}</span>
+              <span v-if="getPendingCount(project.id!) > 0"
+                class="text-[9px] font-bold opacity-50">{{ getPendingCount(project.id!) }}</span>
+            </button>
+          </div>
+        </RouterLink>
+      </VueDraggable>
 
     </div>
   </nav>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { RouterLink } from 'vue-router'
+import { VueDraggable } from 'vue-draggable-plus'
 import { useUIStore } from '@/stores/ui'
 import { useProjectsStore } from '@/stores/projects'
 import { useTasksStore } from '@/stores/tasks'
@@ -113,6 +132,7 @@ import ProjectColorPicker from '@/components/project/ProjectColorPicker.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import type { Project } from '@/entities'
 
 const uiStore = useUIStore()
 const projectsStore = useProjectsStore()
@@ -121,6 +141,10 @@ const tasksStore = useTasksStore()
 const showAddProject = ref(false)
 const newProjectName = ref('')
 const newProjectColor = ref('#6366f1')
+
+// Local copy for drag-and-drop; syncs when store changes
+const localProjects = ref<Project[]>([...projectsStore.projects])
+watch(() => projectsStore.projects, incoming => { localProjects.value = [...incoming] })
 
 const inboxCount = computed(() => tasksStore.getInbox().length)
 const activeColorCombo = computed(() => uiStore.activeProjectColors)
@@ -132,6 +156,11 @@ function getPendingCount(projectId: number) {
 function cycleColorCombo() {
   uiStore.cycleThemeCombo()
   newProjectColor.value = uiStore.activeProjectColors[0]
+}
+
+function onProjectReorder() {
+  const ids = localProjects.value.map(p => p.id!)
+  projectsStore.reorder(ids)
 }
 
 async function handleAddProject() {

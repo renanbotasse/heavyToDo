@@ -18,7 +18,12 @@ export const TaskUseCases = {
       const projectId = resolveCreateProjectId(validInputProject?.id, fallbackDefault)
       if (!projectId) return err('INVARIANT_VIOLATION', 'No default project')
 
-      const id = await db.tasks.add({ ...data, projectId, createdAt: now, updatedAt: now })
+      // Assign order: new tasks go to the end of their sibling group
+      const order = data.parentId
+        ? await db.tasks.where('parentId').equals(data.parentId).count()
+        : await db.tasks.where('projectId').equals(projectId).filter(t => !t.parentId).count()
+
+      const id = await db.tasks.add({ ...data, projectId, order, createdAt: now, updatedAt: now })
       const task = (await db.tasks.get(id))!
       broadcast({ type: 'TASK_UPDATED', taskId: id as ID })
       return ok(task)

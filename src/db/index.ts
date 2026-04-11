@@ -28,6 +28,28 @@ class AppDB extends Dexie {
       taskRecurrence: '++id, taskId',
       userConfig:     '++id',
     })
+    this.version(2).stores({
+      projects:       '++id, name, isDefault, order',
+      tasks:          '++id, projectId, parentId, status, myDay, dueAt, createdAt, updatedAt, order, [projectId+status], [dueAt+status]',
+    }).upgrade(async tx => {
+      const projects = await tx.table('projects').toArray()
+      for (let i = 0; i < projects.length; i++) {
+        await tx.table('projects').update(projects[i].id, { order: i })
+      }
+      const tasks = await tx.table('tasks').toArray()
+      // Group root tasks by project, subtasks by parent — assign sequential order within each group
+      const groups = new Map<string, number[]>()
+      for (const t of tasks) {
+        const key = t.parentId ? `p:${t.parentId}` : `r:${t.projectId}`
+        if (!groups.has(key)) groups.set(key, [])
+        groups.get(key)!.push(t.id)
+      }
+      for (const ids of groups.values()) {
+        for (let i = 0; i < ids.length; i++) {
+          await tx.table('tasks').update(ids[i], { order: i })
+        }
+      }
+    })
   }
 }
 
@@ -44,6 +66,7 @@ export async function seedDefaults() {
       name: 'No Project',
       color: '#6b7280',
       isDefault: true,
+      order: 0,
       createdAt: new Date(),
     })) as number
   } else {

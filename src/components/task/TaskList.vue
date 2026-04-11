@@ -23,12 +23,12 @@
       class="flex flex-col gap-4 bg-white border-3 border-ink shadow-standard p-6 mb-4">
       <div class="flex flex-col gap-1">
         <label class="text-[10px] font-bold font-tech uppercase tracking-widest">Entry Title</label>
-        <input v-model="newTitle" autofocus placeholder="COMMAND LINE INPUT..."
+        <input v-model="newTitle" autofocus placeholder="Task title..."
           class="w-full bg-white text-ink text-lg outline-none border-b-3 border-black p-0" />
       </div>
       <div class="flex gap-2 justify-end">
-        <Button type="button" variant="ghost" @click="showAdd = false">DISCARD</Button>
-        <Button type="submit" variant="default">EXECUTE</Button>
+        <Button type="button" variant="ghost" @click="showAdd = false">Cancel</Button>
+        <Button type="submit" variant="default">Add</Button>
       </div>
     </form>
 
@@ -37,10 +37,37 @@
       <SkeletonCard v-for="n in 4" :key="n" />
     </template>
 
-    <!-- Task list -->
+    <!-- Draggable task list (project view, no filter) -->
+    <template v-else-if="isDraggable">
+      <VueDraggable
+        v-model="localTasks"
+        handle=".task-drag-handle"
+        :animation="150"
+        class="flex flex-col gap-3"
+        @end="onTaskReorder"
+      >
+        <TaskItem
+          v-for="(task, idx) in localTasks"
+          :key="task.id"
+          :task="task"
+          :position="idx + 1"
+        />
+      </VueDraggable>
+      <div v-if="localTasks.length === 0"
+        class="text-sm font-tech text-muted-foreground uppercase py-12 text-center border-3 border-ink border-dashed opacity-50">
+        NO TASKS IN THIS PROJECT
+      </div>
+    </template>
+
+    <!-- Static list (filtered or no projectId) -->
     <template v-else>
       <div class="flex flex-col gap-3">
-        <TaskItem v-for="task in filtered" :key="task.id" :task="task" />
+        <TaskItem
+          v-for="(task, idx) in filtered"
+          :key="task.id"
+          :task="task"
+          :position="getPositionLabel(task.id!)"
+        />
       </div>
       <div v-if="filtered.length === 0"
         class="text-sm font-tech text-muted-foreground uppercase py-12 text-center border-3 border-ink border-dashed opacity-50">
@@ -51,12 +78,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { VueDraggable } from 'vue-draggable-plus'
 import { useTasksStore } from '@/stores/tasks'
 import { useProjectsStore } from '@/stores/projects'
 import TaskItem from './TaskItem.vue'
 import SkeletonCard from '@/components/shared/SkeletonCard.vue'
-import type { Task } from '@/entities'
+import type { Task, ID } from '@/entities'
 
 const props = defineProps<{ projectId?: number; tasks?: Task[]; loading?: boolean }>()
 
@@ -78,6 +106,24 @@ const filtered = computed(() => {
   if (filterStatus.value) list = list.filter(t => t.status === filterStatus.value)
   return list
 })
+
+// Drag is only enabled in project view with no active filter
+const isDraggable = computed(() => props.projectId !== undefined && !filterStatus.value)
+
+// Local copy for drag; syncs from filtered when store or filter changes
+const localTasks = ref<Task[]>([...filtered.value])
+watch(filtered, incoming => { localTasks.value = [...incoming] })
+
+function onTaskReorder() {
+  if (!isDraggable.value) return
+  tasksStore.reorderInProject(localTasks.value.map(t => t.id!))
+}
+
+// For the static (filtered) view, show the real position within the project
+function getPositionLabel(taskId: ID): number | undefined {
+  if (props.projectId === undefined) return undefined
+  return tasksStore.getPositionInProject(taskId)
+}
 
 async function handleAdd() {
   const title = newTitle.value.trim()

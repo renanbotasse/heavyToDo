@@ -5,6 +5,7 @@ export interface Project {
   name: string
   color: string
   isDefault: boolean
+  order?: number
   createdAt: Date
 }
 
@@ -16,6 +17,7 @@ export interface Task {
   parentId?: ID               // se for subtask
   status: 'todo' | 'in_progress' | 'done' | 'archived'
   priority: 'none' | 'low' | 'medium' | 'high'
+  order?: number
   dueAt?: Date                // UTC
   timeEstimateMin?: number
   myDay: boolean
