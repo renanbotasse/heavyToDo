@@ -63,7 +63,7 @@
     <template v-else>
       <div class="flex flex-col gap-3">
         <TaskItem
-          v-for="(task, idx) in filtered"
+          v-for="task in filtered"
           :key="task.id"
           :task="task"
           :position="getPositionLabel(task.id!)"
