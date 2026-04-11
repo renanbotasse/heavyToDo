@@ -71,6 +71,23 @@
                 <span class="mr-2">☀</span>
                 MY DAY
               </Button>
+              <Button
+                @click="archiveTask"
+                variant="outline"
+                class="w-full h-11 text-sm font-tech tracking-wider"
+                :class="task.status === 'archived' ? 'bg-amber-100 border-amber-500 text-amber-700' : ''"
+              >
+                <span class="mr-2">{{ task.status === 'archived' ? '↩' : '▣' }}</span>
+                {{ task.status === 'archived' ? 'UNARCHIVE' : 'ARCHIVE' }}
+              </Button>
+              <Button
+                @click="deleteTask"
+                variant="outline"
+                class="w-full h-11 text-sm font-tech tracking-wider border-red-400 text-red-600 hover:bg-red-50"
+              >
+                <span class="mr-2">✕</span>
+                DELETE
+              </Button>
             </div>
 
             <Separator class="bg-ink/10 h-[2px]" />
@@ -194,6 +211,19 @@ function queueSave() {
 
 function onDescUpdate(json: string) {
   autosave.schedule(async () => { await tasksStore.update(task.value!.id!, { description: json }) })
+}
+
+async function archiveTask() {
+  if (!task.value) return
+  const newStatus = task.value.status === 'archived' ? 'todo' : 'archived'
+  await tasksStore.update(task.value.id!, { status: newStatus as Task['status'] })
+}
+
+async function deleteTask() {
+  if (!task.value) return
+  const id = task.value.id!
+  uiStore.closeTask()
+  await tasksStore.remove(id)
 }
 
 async function save() {

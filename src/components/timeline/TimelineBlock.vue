@@ -5,8 +5,13 @@
     @mousedown.stop="startDrag"
     @click.stop="onClick"
   >
-    <div class="text-xs font-medium truncate text-white leading-tight">{{ task.title }}</div>
-    <div v-if="blockHeight > 32" class="text-xs text-white/70 truncate">
+    <!-- done/archived strikethrough overlay -->
+    <div v-if="isFinished" class="absolute inset-0 pointer-events-none"
+      style="background-image: repeating-linear-gradient(135deg, rgba(255,255,255,0.08) 0px, rgba(255,255,255,0.08) 1px, transparent 1px, transparent 8px)" />
+    <div class="text-xs font-medium truncate text-white leading-tight"
+      :class="{ 'line-through opacity-60': isFinished }">{{ task.title }}</div>
+    <div v-if="blockHeight > 32" class="text-xs text-white/60 truncate">
+      <span v-if="isFinished" class="mr-1">{{ task.status === 'done' ? '✓' : '▣' }}</span>
       {{ task.dueAt ? format(new Date(task.dueAt), 'HH:mm') : '' }}
     </div>
     <!-- Resize handle -->
@@ -57,15 +62,17 @@ const effectiveTop = computed(() => (liveTop.value ?? blockTop.value))
 const effectiveHeight = computed(() => (liveHeight.value ?? blockHeight.value))
 
 const isSubtask = computed(() => !!props.task.parentId)
+const isFinished = computed(() => props.task.status === 'done' || props.task.status === 'archived')
 
 const blockStyle = computed(() => ({
   top: `${effectiveTop.value}px`,
   height: `${effectiveHeight.value}px`,
-  background: color.value + (isSubtask.value ? '88' : 'cc'),
+  background: color.value + (isFinished.value ? '55' : isSubtask.value ? '88' : 'cc'),
   borderLeft: `${isSubtask.value ? '2px dashed' : '3px solid'} ${color.value}`,
   left: isSubtask.value ? '14px' : '4px',
   right: '4px',
   zIndex: dragging.value || resizing.value ? 30 : 10,
+  opacity: isFinished.value ? '0.7' : '1',
 }))
 
 function startDrag(e: MouseEvent) {

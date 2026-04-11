@@ -9,14 +9,16 @@
         @click="uiStore.openTask(sub.id!)"
       >
         <button
-          class="w-5 h-5 border-2 border-ink flex-shrink-0 flex items-center justify-center transition-all bg-white"
-          :class="sub.status === 'done' ? 'bg-primary' : 'hover:bg-primary/10'"
+          class="w-5 h-5 border-2 flex-shrink-0 flex items-center justify-center transition-all"
+          :class="sub.status === 'done'
+            ? 'bg-primary border-primary'
+            : 'bg-white border-ink hover:border-primary hover:bg-primary/10'"
           @click.stop="toggleSub(sub)"
         >
-          <span v-if="sub.status === 'done'" class="text-white text-[10px] font-bold">X</span>
+          <span v-if="sub.status === 'done'" class="text-white text-[11px] font-bold leading-none">✓</span>
         </button>
-        <span class="flex-1 text-sm font-bold text-ink truncate font-sans"
-          :class="{ 'line-through text-ink/30': sub.status === 'done' }">
+        <span class="flex-1 text-sm font-bold truncate font-sans transition-colors"
+          :class="sub.status === 'done' ? 'line-through text-ink/30' : 'text-ink'">
           {{ sub.title }}
         </span>
         <span v-if="sub.priority !== 'none'" class="w-2 h-2 flex-shrink-0 opacity-0 group-hover:opacity-100"

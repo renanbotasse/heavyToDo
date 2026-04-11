@@ -193,7 +193,7 @@ onMounted(() => { updateNow(); nowTimer = setInterval(updateNow, 60000) })
 onBeforeUnmount(() => clearInterval(nowTimer))
 
 const scheduledTasks = computed(() =>
-  tasksStore.tasks.filter(t => !!t.dueAt && t.status !== 'archived')
+  tasksStore.tasks.filter(t => !!t.dueAt)
 )
 
 function getTasksForDate(date: Date) {
