@@ -47,10 +47,10 @@
         @end="onTaskReorder"
       >
         <TaskItem
-          v-for="(task, idx) in localTasks"
+          v-for="(task, i) in localTasks"
           :key="task.id"
           :task="task"
-          :position="idx + 1"
+          :position="i + 1"
         />
       </VueDraggable>
       <div v-if="localTasks.length === 0"
