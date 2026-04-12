@@ -71,6 +71,22 @@ export interface TimeEntry {
   endedAt?: Date
 }
 
+export interface TimeBlock {
+  id?: ID
+  title: string
+  color: string
+  startAt: Date
+  durationMin: number
+  createdAt: Date
+}
+
+export interface TimeBlockType {
+  id?: ID
+  name: string
+  color: string
+  createdAt: Date
+}
+
 export interface UserConfig {
   id: 1
   defaultProjectId: ID

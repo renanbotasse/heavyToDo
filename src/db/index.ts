@@ -1,7 +1,7 @@
 import Dexie, { type Table } from 'dexie'
 import type {
   Project, Task, Comment, Doc, TimeEntry,
-  Tag, TaskTag, TaskRecurrence, UserConfig,
+  Tag, TaskTag, TaskRecurrence, TimeBlock, TimeBlockType, UserConfig,
 } from '@/entities'
 
 class AppDB extends Dexie {
@@ -13,6 +13,8 @@ class AppDB extends Dexie {
   tags!: Table<Tag>
   taskTags!: Table<TaskTag>
   taskRecurrence!: Table<TaskRecurrence>
+  timeBlocks!: Table<TimeBlock>
+  timeBlockTypes!: Table<TimeBlockType>
   userConfig!: Table<UserConfig>
 
   constructor() {
@@ -49,6 +51,12 @@ class AppDB extends Dexie {
           await tx.table('tasks').update(ids[i], { order: i })
         }
       }
+    })
+    this.version(3).stores({
+      timeBlocks: '++id, startAt',
+    })
+    this.version(4).stores({
+      timeBlockTypes: '++id, createdAt',
     })
   }
 }

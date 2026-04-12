@@ -122,6 +122,8 @@ import { useTasksStore } from '@/stores/tasks'
 import { useProjectsStore } from '@/stores/projects'
 import { useTimerStore } from '@/stores/timer'
 import { useTagsStore } from '@/stores/tags'
+import { useTimeBlocksStore } from '@/stores/timeBlocks'
+import { useTimeBlockTypesStore } from '@/stores/timeBlockTypes'
 import { seedDefaults } from '@/db'
 import AppSidebar from '@/components/sidebar/AppSidebar.vue'
 import TimerBar from '@/components/timer/TimerBar.vue'
@@ -140,6 +142,8 @@ const tasksStore = useTasksStore()
 const projectsStore = useProjectsStore()
 const timerStore = useTimerStore()
 const tagsStore = useTagsStore()
+const timeBlocksStore = useTimeBlocksStore()
+const timeBlockTypesStore = useTimeBlockTypesStore()
 const route = useRoute()
 
 const headerTitle = computed(() => {
@@ -162,6 +166,8 @@ onMounted(async () => {
       tasksStore.load(),
       projectsStore.load(),
       tagsStore.load(),
+      timeBlocksStore.load(),
+      timeBlockTypesStore.load(),
     ])
     await timerStore.recover()
   } catch (e) {

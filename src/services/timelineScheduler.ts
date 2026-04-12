@@ -1,4 +1,4 @@
-import type { Task } from '@/entities'
+import type { Task, TimeBlock } from '@/entities'
 
 export interface TimelineBlockMetrics {
   top: number
@@ -18,6 +18,13 @@ export function taskToBlock(task: Task, hourHeight: number): TimelineBlockMetric
   const top = dueAt.getHours() * hourHeight + (dueAt.getMinutes() / 60) * hourHeight
   const estimate = task.timeEstimateMin ?? 30
   const height = Math.max((estimate / 60) * hourHeight, hourHeight / 4)
+  return { top, height }
+}
+
+export function timeBlockToMetrics(block: TimeBlock, hourHeight: number): TimelineBlockMetrics {
+  const start = new Date(block.startAt)
+  const top = start.getHours() * hourHeight + (start.getMinutes() / 60) * hourHeight
+  const height = Math.max((block.durationMin / 60) * hourHeight, hourHeight / 4)
   return { top, height }
 }
 

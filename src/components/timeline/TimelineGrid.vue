@@ -37,6 +37,16 @@
         </div>
       </div>
 
+      <!-- Early-hours indicator -->
+      <div v-if="earlyTaskCount > 0"
+        class="flex-shrink-0 flex items-center gap-2 px-5 py-1.5 bg-amber-50 border-b-2 border-amber-300 cursor-pointer hover:bg-amber-100 transition-colors select-none"
+        @click="scrollRef?.scrollTo({ top: 0, behavior: 'smooth' })">
+        <span class="text-amber-600 text-xs leading-none">⚠</span>
+        <span class="text-[10px] font-bold font-tech uppercase tracking-widest text-amber-700">
+          {{ earlyTaskCount }} {{ earlyTaskCount === 1 ? 'task' : 'tasks' }} before 08:00 — click to view
+        </span>
+      </div>
+
       <!-- Scroll container -->
       <div class="flex flex-1 overflow-y-auto bg-parchment/10 relative" ref="scrollRef">
         <!-- Texture overlay -->
@@ -79,7 +89,14 @@
 
             <!-- Task blocks -->
             <TimelineBlock v-for="task in getTasksForDate(col.date)" :key="task.id"
-              :task="task" :hour-height="HOUR_H" @commit="onBlockCommit" @hover-date="onBlockHoverDate" />
+              :task="task" :hour-height="HOUR_H" @commit="onTaskBlockCommit" @hover-date="onBlockHoverDate" />
+
+            <!-- Time blocks -->
+            <TimelineTimeBlock v-for="block in getTimeBlocksForDate(col.date)" :key="`tb-${block.id}`"
+              :block="block" :hour-height="HOUR_H"
+              @commit="onTimeBlockCommit"
+              @edit="openEditPopover"
+              @hover-date="onBlockHoverDate" />
 
             <!-- Ghost block -->
             <div v-if="ghost && isSameDay(ghost.date, col.date)"
@@ -95,12 +112,12 @@
       <div class="grid grid-cols-7 border-3 border-ink">
         <div v-for="d in ['SUN','MON','TUE','WED','THU','FRI','SAT']" :key="d"
           class="bg-ink text-white text-[10px] font-tech font-bold py-3 text-center border-r border-white/20 last:border-r-0">{{ d }}</div>
-        
+
         <div v-for="cell in monthCells" :key="cell.date.toISOString()"
           class="min-h-[120px] border-t-3 border-r-3 border-ink p-3 cursor-pointer transition-all bg-parchment/5 hover:bg-parchment-high relative group"
           :class="{ 'bg-background': cell.currentMonth, 'opacity-40': !cell.currentMonth }"
           @click="currentDate = cell.date; view = 'daily'">
-          
+
           <div class="text-sm font-tech font-bold mb-2"
             :class="isSameDay(cell.date, new Date()) ? 'bg-primary text-white px-1 w-fit' : 'text-ink'">
             {{ cell.date.getDate() }}
@@ -108,7 +125,7 @@
 
           <div class="flex flex-col gap-1">
             <div v-for="task in getTasksForDate(cell.date).slice(0, 3)" :key="task.id"
-              class="text-[9px] font-tech font-bold uppercase tracking-tighter truncate border-l-2 border-ink px-1.5 py-0.5"
+              class="text-[9px] font-tech font-bold uppercase tracking-tighter truncate border-l-2 px-1.5 py-0.5"
               :style="{ borderColor: getTaskColor(task) }">
               {{ task.title }}
             </div>
@@ -116,12 +133,27 @@
               +{{ getTasksForDate(cell.date).length - 3 }} UNITS
             </div>
           </div>
-          
-          <!-- Cell hover effect -->
-          <div class="absolute inset-0 border-2 border-primary opacity-0 group-hover:opacity-100 pointer-events-none"></div>
+
+          <div class="absolute inset-0 border-2 border-primary opacity-0 group-hover:opacity-100 pointer-events-none" />
         </div>
       </div>
     </div>
+
+    <!-- Time Block Popover -->
+    <TimeBlockPopover
+      v-if="pendingBlock"
+      :mode="pendingBlock.mode"
+      :title="pendingBlock.title"
+      :color="pendingBlock.color"
+      :duration-min="pendingBlock.durationMin"
+      :x="pendingBlock.x"
+      :y="pendingBlock.y"
+      @confirm="confirmPopover"
+      @cancel="pendingBlock = null"
+      @delete="deleteBlock"
+      @duplicate="duplicateBlock"
+    />
+
   </div>
 </template>
 
@@ -130,13 +162,17 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { format } from 'date-fns'
 import { useTasksStore } from '@/stores/tasks'
 import { useProjectsStore } from '@/stores/projects'
+import { useTimeBlocksStore } from '@/stores/timeBlocks'
 import { Button } from '@/components/ui/button'
 import TimelineBlock from './TimelineBlock.vue'
-import type { Task } from '@/entities'
+import TimelineTimeBlock from './TimelineTimeBlock.vue'
+import TimeBlockPopover from './TimeBlockPopover.vue'
+import type { Task, TimeBlock } from '@/entities'
 import { blockToDueAt, heightToEstimateMin, toDateKey } from '@/services/timelineScheduler'
 
 const scrollRef = ref<HTMLElement | null>(null)
 const HOUR_H = 64
+const VISIBLE_START_HOUR = 8
 const hours = Array.from({ length: 24 }, (_, i) => i)
 const totalHeight = 24 * HOUR_H
 
@@ -147,7 +183,20 @@ const views = [{ value: 'daily' as View, label: 'Day' }, { value: 'weekly' as Vi
 
 const tasksStore = useTasksStore()
 const projectsStore = useProjectsStore()
+const timeBlocksStore = useTimeBlocksStore()
 const dragOverDateKey = ref<string | null>(null)
+
+type PendingBlock = {
+  mode: 'create' | 'edit'
+  blockId?: number
+  startAt: Date
+  x: number
+  y: number
+  title: string
+  color: string
+  durationMin: number
+}
+const pendingBlock = ref<PendingBlock | null>(null)
 
 function isSameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
@@ -189,7 +238,14 @@ function navigate(d: number) {
 const nowTop = ref(-1)
 function updateNow() { const n = new Date(); nowTop.value = n.getHours() * HOUR_H + (n.getMinutes() / 60) * HOUR_H }
 let nowTimer: ReturnType<typeof setInterval>
-onMounted(() => { updateNow(); nowTimer = setInterval(updateNow, 60000) })
+onMounted(() => {
+  updateNow()
+  nowTimer = setInterval(updateNow, 60000)
+  // Start grid at VISIBLE_START_HOUR; if current time is past that, start 1h before now
+  const hour = new Date().getHours()
+  const targetHour = hour >= VISIBLE_START_HOUR ? Math.max(VISIBLE_START_HOUR, hour - 1) : VISIBLE_START_HOUR
+  scrollRef.value?.scrollTo({ top: targetHour * HOUR_H })
+})
 onBeforeUnmount(() => clearInterval(nowTimer))
 
 const scheduledTasks = computed(() =>
@@ -200,32 +256,110 @@ function getTasksForDate(date: Date) {
   return scheduledTasks.value.filter(t => isSameDay(new Date(t.dueAt!), date))
 }
 
+function getTimeBlocksForDate(date: Date) {
+  return timeBlocksStore.blocks.filter(b => isSameDay(new Date(b.startAt), date))
+}
+
+// Count tasks across visible columns that are before VISIBLE_START_HOUR
+const earlyTaskCount = computed(() => {
+  if (view.value === 'monthly') return 0
+  return columns.value.reduce((acc, col) => {
+    return acc + getTasksForDate(col.date).filter(t => new Date(t.dueAt!).getHours() < VISIBLE_START_HOUR).length
+  }, 0)
+})
+
+function openCreatePopover(startAt: Date, x: number, y: number) {
+  pendingBlock.value = { mode: 'create', startAt, x, y, title: '', color: '#3b82f6', durationMin: 60 }
+}
+
+function openEditPopover(blockId: number, x: number, y: number) {
+  const block = timeBlocksStore.blocks.find(b => b.id === blockId)
+  if (!block) return
+  pendingBlock.value = {
+    mode: 'edit',
+    blockId,
+    startAt: new Date(block.startAt),
+    x, y,
+    title: block.title,
+    color: block.color,
+    durationMin: block.durationMin,
+  }
+}
+
+async function confirmPopover(title: string, color: string, durationMin: number) {
+  if (!pendingBlock.value) return
+  if (pendingBlock.value.mode === 'create') {
+    await timeBlocksStore.add({ title, color, startAt: pendingBlock.value.startAt, durationMin })
+  } else if (pendingBlock.value.blockId !== undefined) {
+    await timeBlocksStore.update(pendingBlock.value.blockId, { title, color, durationMin })
+  }
+  pendingBlock.value = null
+}
+
+async function deleteBlock() {
+  if (pendingBlock.value?.blockId !== undefined) {
+    await timeBlocksStore.remove(pendingBlock.value.blockId)
+  }
+  pendingBlock.value = null
+}
+
+async function duplicateBlock() {
+  if (!pendingBlock.value || pendingBlock.value.blockId === undefined) return
+  const src = timeBlocksStore.blocks.find(b => b.id === pendingBlock.value!.blockId)
+  if (!src) return
+  const startAt = new Date(new Date(src.startAt).getTime() + src.durationMin * 60_000)
+  await timeBlocksStore.add({ title: src.title, color: src.color, startAt, durationMin: src.durationMin })
+  pendingBlock.value = null
+}
+
 function getTaskColor(task: Task) {
-  if (!task.projectId) return '#6366f1'
   return projectsStore.getById(task.projectId)?.color ?? '#6366f1'
 }
+
+const monthCells = computed(() => {
+  const y = currentDate.value.getFullYear(), mo = currentDate.value.getMonth()
+  const offset = new Date(y, mo, 1).getDay()
+  return Array.from({ length: 42 }, (_, i) => {
+    const d = new Date(y, mo, 1 - offset + i)
+    return { date: d, currentMonth: d.getMonth() === mo }
+  })
+})
 
 // Drop from sidebar / other
 async function onDrop(e: DragEvent, date: Date) {
   dragOverDateKey.value = null
+  // rect.top already reflects current scroll (element moves up as you scroll),
+  // so no need to add scrollTop — that would double-count it.
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  const relY = e.clientY - rect.top
+
+  // Block type drop — create directly with type's title/color and 1h default
+  const typeData = e.dataTransfer?.getData('application/timeblock-type')
+  if (typeData) {
+    const { title, color } = JSON.parse(typeData) as { title: string; color: string }
+    const startAt = blockToDueAt(relY, date, HOUR_H)
+    await timeBlocksStore.add({ title, color, startAt, durationMin: 60 })
+    return
+  }
+
+  // Existing task drop
   const taskId = Number(e.dataTransfer?.getData('application/task-id'))
   if (!taskId) return
-  // Suppress the synthetic click some browsers fire after drag ends,
-  // which would otherwise trigger TimelineBlock's click-to-open-modal handler
   ;(e.currentTarget as HTMLElement).addEventListener(
     'click',
     (ev) => ev.stopPropagation(),
     { once: true, capture: true }
   )
-  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-  const scrollTop = scrollRef.value?.scrollTop ?? 0
-  const y = e.clientY - rect.top + scrollTop
-  const dueAt = blockToDueAt(y, date, HOUR_H)
+  const dueAt = blockToDueAt(relY, date, HOUR_H)
   await tasksStore.update(taskId, { dueAt })
 }
 
-async function onBlockCommit(taskId: number, changes: Partial<Task>) {
+async function onTaskBlockCommit(taskId: number, changes: Partial<Task>) {
   await tasksStore.update(taskId, changes)
+}
+
+async function onTimeBlockCommit(blockId: number, changes: Partial<TimeBlock>) {
+  await timeBlocksStore.update(blockId, changes)
 }
 
 function onBlockHoverDate(dateKey: string | null) {
@@ -245,13 +379,15 @@ let dragStartY = 0
 
 function onMouseDown(e: MouseEvent, date: Date) {
   if ((e.target as HTMLElement).closest('.timeline-block')) return
-  const el = e.currentTarget as HTMLElement
-  const rect = el.getBoundingClientRect()
-  dragStartY = e.clientY - rect.top + (scrollRef.value?.scrollTop ?? 0)
+  // Anchor to the scroll container (fixed viewport rect) + live scrollTop
+  // so the calculation stays correct if the user scrolls during the draw gesture.
+  const container = scrollRef.value!
+  const containerRect = container.getBoundingClientRect()
+  dragStartY = e.clientY - containerRect.top + container.scrollTop
   ghost.value = { top: dragStartY, height: 0, date }
 
   function onMove(me: MouseEvent) {
-    const y = me.clientY - rect.top + (scrollRef.value?.scrollTop ?? 0)
+    const y = me.clientY - containerRect.top + (scrollRef.value?.scrollTop ?? 0)
     const top = Math.min(dragStartY, y)
     const height = Math.abs(y - dragStartY)
     ghost.value = { top, height: Math.max(height, HOUR_H / 4), date }
@@ -272,12 +408,4 @@ function onMouseDown(e: MouseEvent, date: Date) {
   document.addEventListener('mouseup', onUp)
 }
 
-const monthCells = computed(() => {
-  const y = currentDate.value.getFullYear(), mo = currentDate.value.getMonth()
-  const offset = new Date(y, mo, 1).getDay()
-  return Array.from({ length: 42 }, (_, i) => {
-    const d = new Date(y, mo, 1 - offset + i)
-    return { date: d, currentMonth: d.getMonth() === mo }
-  })
-})
 </script>
