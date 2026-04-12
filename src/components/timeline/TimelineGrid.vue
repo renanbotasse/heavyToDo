@@ -268,9 +268,6 @@ const earlyTaskCount = computed(() => {
   }, 0)
 })
 
-function openCreatePopover(startAt: Date, x: number, y: number) {
-  pendingBlock.value = { mode: 'create', startAt, x, y, title: '', color: '#3b82f6', durationMin: 60 }
-}
 
 function openEditPopover(blockId: number, x: number, y: number) {
   const block = timeBlocksStore.blocks.find(b => b.id === blockId)
